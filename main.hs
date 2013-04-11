@@ -1,3 +1,7 @@
+--Author: Tyler Dougherty
+-- This program is a relatively simple tic-tac-toe game, designed to learn
+--		optimal moves the more games it plays
+
 data PosState = PosEmpty | PosX | PosO deriving (Show) --States for the board
 
 --Converts a state into the appropriate character
@@ -11,9 +15,9 @@ toStr :: [[PosState]] -> Int -> String
 toStr b 7 = ""
 toStr b i
 	| even i = "+-+-+-+\n" ++ toStr b (i+1)
-	| otherwise = "|" ++ char (b !! (i`mod`2-1) !! 0) ++
-				  "|" ++ char (b !! (i`mod`2-1) !! 1) ++
-				  "|" ++ char (b !! (i`mod`2-1) !! 2) ++
+	| otherwise = "|" ++ char (b !! (i`div`2) !! 0) ++
+				  "|" ++ char (b !! (i`div`2) !! 1) ++
+				  "|" ++ char (b !! (i`div`2) !! 2) ++
 				  "|\n" ++ toStr b (i+1)
 				  
 --Replaces an element in the list with a new value
@@ -30,9 +34,32 @@ playerMove = do
 	return(read m :: Int)
 	
 --Checks the board for winning moves, and if there is one, prints the end-game messages
-win? :: [[PosState]] -> IO()
-win? [[PosX,_,_],[PosX,_,_],[PosX,_,_]] = 
+-- Parameter two specifies whether the function is checking for player or AI wins
+checkWin :: [[PosState]] -> PosState -> Bool
+-- Player wins
+checkWin [[PosX,_,_],[PosX,_,_],[PosX,_,_]] PosX = True
+checkWin [[_,PosX,_],[_,PosX,_],[_,PosX,_]] PosX = True
+checkWin [[_,_,PosX],[_,_,PosX],[_,_,PosX]] PosX = True
+checkWin [[PosX,PosX,PosX],[_,_,_],[_,_,_]] PosX = True
+checkWin [[_,_,_],[PosX,PosX,PosX],[_,_,_]] PosX = True
+checkWin [[_,_,_],[_,_,_],[PosX,PosX,PosX]] PosX = True
+checkWin [[PosX,_,_],[_,PosX,_],[_,_,PosX]] PosX = True
+checkWin [[_,_,PosX],[_,PosX,_],[PosX,_,_]] PosX = True
+-- AI wins
+checkWin [[PosO,_,_],[PosO,_,_],[PosO,_,_]] PosO = True
+checkWin [[_,PosO,_],[_,PosO,_],[_,PosO,_]] PosO = True
+checkWin [[_,_,PosO],[_,_,PosO],[_,_,PosO]] PosO = True
+checkWin [[PosO,PosO,PosO],[_,_,_],[_,_,_]] PosO = True
+checkWin [[_,_,_],[PosO,PosO,PosO],[_,_,_]] PosO = True
+checkWin [[_,_,_],[_,_,_],[PosO,PosO,PosO]] PosO = True
+checkWin [[PosO,_,_],[_,PosO,_],[_,_,PosO]] PosO = True
+checkWin [[_,_,PosO],[_,PosO,_],[PosO,_,_]] PosO = True
+-- Other
+checkWin _ _ = False
 --WORK MORE HERE
+
+printWinMessage PosX = do
+	putStrLn "You win!"
 	
 --Initialization
 main :: IO()
@@ -48,10 +75,11 @@ run :: [[PosState]] -> IO()
 run board = do
 	putStrLn $ toStr board 0 --Print the board
 	m1 <- playerMove --Get the player's move
-	let newBoard1 = replace board (m1 `div` 3) (m1 `mod` 3) PosX --Apply player's move
-	--Win?
-	--Print board
-	--Get AI's move
-	--Win?
-	run newBoard2
-	
+	let newBoard1 = replace board ((m1-1) `div` 3) ((m1-1) `mod` 3) PosX --Apply player's move
+	if checkWin newBoard1 PosX
+		then printWinMessage PosX
+		else do
+			--Print board
+			--Get AI's move
+			--checkWin
+			run newBoard1
