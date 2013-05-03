@@ -1,9 +1,34 @@
 --Author: Tyler Dougherty
--- This program is a relatively simple tic-tac-toe game, designed to learn
---		optimal moves the more games it plays
+-- This program is a relatively simple tic-tac-toe game.
 
-data PosState = PosEmpty | PosX | PosO deriving (Show) --States for the board
+--Imports
+import Control.Concurrent
+import System.Random
 
+data PosState = PosEmpty | PosX | PosO deriving (Show, Eq) --States for the board
+
+--AI
+getMove :: [[PosState]] -> Int -> Int
+getMove board val =
+	if open board 5 --Try for middle
+	then 5
+	else if length a > 0
+		then (a !! 0)
+		else if length b > 0
+			then b !! 0
+			else ([x | x <- [1..9], open board x] !! (val-1)) --Random move
+	where a = [x | x <- [1..9], open board x, checkWin (replace board ((x-1)`div`3) ((x-1)`mod`3) PosO) PosO] --Winning condition for AI
+	      b = [x | x <- [1..9], open board x, checkWin (replace board ((x-1)`div`3) ((x-1)`mod`3) PosX) PosX] --Winning condition for player
+
+--Returns the state at the given location
+--  +Uses the 1-9 index system as input
+stateAt :: [[PosState]] -> Int -> PosState
+stateAt board a = board !! ((a-1)`div`3) !! ((a-1)`mod`3)
+
+--Checks if the given move is open
+open :: [[PosState]] -> Int -> Bool
+open b a = stateAt b a == PosEmpty
+	
 --Converts a state into the appropriate character
 char :: PosState -> String
 char PosEmpty = " "
@@ -56,11 +81,13 @@ checkWin [[PosO,_,_],[_,PosO,_],[_,_,PosO]] PosO = True
 checkWin [[_,_,PosO],[_,PosO,_],[PosO,_,_]] PosO = True
 -- Other
 checkWin _ _ = False
---WORK MORE HERE
 
-printWinMessage PosX = do
-	putStrLn "You win!"
-	
+--Checks if the game has ended in a draw
+checkDraw :: [[PosState]] -> Bool
+checkDraw board = (checkSub (board !! 0)) && (checkSub (board !! 1)) && (checkSub (board !! 2))
+checkSub :: [PosState] -> Bool
+checkSub a = ((a !! 0) /= PosEmpty) && ((a !! 1) /= PosEmpty) && ((a !! 2) /= PosEmpty)
+
 --Initialization
 main :: IO()
 main = do
@@ -75,11 +102,33 @@ run :: [[PosState]] -> IO()
 run board = do
 	putStrLn $ toStr board 0 --Print the board
 	m1 <- playerMove --Get the player's move
-	let newBoard1 = replace board ((m1-1) `div` 3) ((m1-1) `mod` 3) PosX --Apply player's move
-	if checkWin newBoard1 PosX
-		then printWinMessage PosX
-		else do
-			--Print board
-			--Get AI's move
-			--checkWin
-			run newBoard1
+	if stateAt board m1 == PosEmpty
+	then do
+		let newBoard1 = replace board ((m1-1) `div` 3) ((m1-1) `mod` 3) PosX --Apply player's move
+		if checkWin newBoard1 PosX --Check for player winning condition
+		then do --Win!
+			putStrLn $ toStr newBoard1 0
+			putStrLn "You win!"
+		else do --Not a win!
+			if checkDraw newBoard1
+			then do
+				putStrLn $ toStr newBoard1 0
+				putStrLn "Draw!"
+			else do
+				putStrLn $ toStr newBoard1 0
+				putStrLn "The AI is thinking..."
+				let moves = [x | x <- [1..9], open newBoard1 x]
+				random <- randomRIO (1,length moves)
+				let m2 = getMove newBoard1 random --Get AI's move
+				let newBoard2 = replace newBoard1 ((m2-1) `div` 3) ((m2-1) `mod` 3) PosO --Apply AI's move
+				threadDelay 500000 --Wait for AI's move (unneeded, added for realism)
+				if checkWin newBoard2 PosO --Check for AI winning condition
+				then do
+					putStrLn $ toStr newBoard2 0
+					putStrLn "You lose!"
+				else
+					run newBoard2
+	else do
+		putStrLn "Invalid move."
+		threadDelay 500000
+		run board
